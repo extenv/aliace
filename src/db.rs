@@ -8,6 +8,8 @@ pub struct CommandModel {
     #[serde(default)]
     pub group: Option<String>,
     pub use_count: u32,
+    #[serde(default)]
+    pub favorite: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -18,6 +20,8 @@ pub struct GroupModel {
     pub commands: Vec<String>,
     #[serde(default)]
     pub use_count: u32,
+    #[serde(default)]
+    pub favorite: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

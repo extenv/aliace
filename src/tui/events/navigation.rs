@@ -19,6 +19,7 @@ pub fn handle_dashboard_key(app: &mut App, key: KeyEvent, terminal: &mut ratatui
             app.screen = AppScreen::ListCommands;
             app.list_selected = 0;
             app.list_tab = 0;
+            app.list_is_searching = true;
         }
         KeyCode::Char('a') | KeyCode::Char('A') => {
             app.init_form_empty();
@@ -32,11 +33,13 @@ pub fn handle_dashboard_key(app: &mut App, key: KeyEvent, terminal: &mut ratatui
             app.screen = AppScreen::UpdateCommandList;
             app.list_selected = 0;
             app.list_tab = 0;
+            app.list_is_searching = true;
         }
         KeyCode::Char('d') | KeyCode::Char('D') => {
             app.screen = AppScreen::DeleteCommandList;
             app.list_selected = 0;
             app.list_tab = 0;
+            app.list_is_searching = true;
         }
         KeyCode::Char('e') | KeyCode::Char('E') => {
             app.screen = AppScreen::ExportMenu;
@@ -48,41 +51,101 @@ pub fn handle_dashboard_key(app: &mut App, key: KeyEvent, terminal: &mut ratatui
             app.import_path = String::new();
             app.import_message = None;
         }
+        KeyCode::Tab => {
+            app.dashboard_focused_panel = if app.dashboard_focused_panel == 0 { 1 } else { 0 };
+        }
+        KeyCode::Char('f') | KeyCode::Char('F') => {
+            if app.dashboard_focused_panel == 0 {
+                let mut sorted_items = vec![];
+                for cmd in &app.db.commands {
+                    sorted_items.push(crate::app::UsedItem {
+                        name: cmd.title.clone(),
+                        is_group: false,
+                        use_count: cmd.use_count,
+                    });
+                }
+                for grp in &app.db.groups {
+                    sorted_items.push(crate::app::UsedItem {
+                        name: grp.name.clone(),
+                        is_group: true,
+                        use_count: grp.use_count,
+                    });
+                }
+                sorted_items.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+                
+                if !sorted_items.is_empty() && app.dashboard_selected < sorted_items.len() {
+                    let selected_item = &sorted_items[app.dashboard_selected];
+                    app.toggle_favorite(&selected_item.name, selected_item.is_group);
+                }
+            }
+        }
         KeyCode::Up => {
-            if app.dashboard_selected > 0 {
-                app.dashboard_selected -= 1;
+            if app.dashboard_focused_panel == 0 {
+                if app.dashboard_selected > 0 {
+                    app.dashboard_selected -= 1;
+                }
+            } else {
+                if app.dashboard_history_selected > 0 {
+                    app.dashboard_history_selected -= 1;
+                }
             }
         }
         KeyCode::Down => {
-            if sorted_len > 0 && app.dashboard_selected < sorted_len - 1 {
-                app.dashboard_selected += 1;
+            if app.dashboard_focused_panel == 0 {
+                if sorted_len > 0 && app.dashboard_selected < sorted_len - 1 {
+                    app.dashboard_selected += 1;
+                }
+            } else {
+                let history_len = app.db.history.len();
+                if history_len > 0 && app.dashboard_history_selected < history_len - 1 {
+                    app.dashboard_history_selected += 1;
+                }
             }
         }
         KeyCode::Enter | KeyCode::Char('r') | KeyCode::Char('R') => {
-            let mut sorted_items = vec![];
-            for cmd in &app.db.commands {
-                sorted_items.push(crate::app::UsedItem {
-                    name: cmd.title.clone(),
-                    is_group: false,
-                    use_count: cmd.use_count,
-                });
-            }
-            for grp in &app.db.groups {
-                sorted_items.push(crate::app::UsedItem {
-                    name: grp.name.clone(),
-                    is_group: true,
-                    use_count: grp.use_count,
-                });
-            }
-            sorted_items.sort_by(|a, b| b.use_count.cmp(&a.use_count));
-            
-            if !sorted_items.is_empty() && app.dashboard_selected < sorted_items.len() {
-                let selected_item = &sorted_items[app.dashboard_selected];
-                let title_or_name = selected_item.name.clone();
-                if selected_item.is_group {
-                    run_tui_group_execution(terminal, app, title_or_name)?;
-                } else {
-                    run_tui_command_execution(terminal, app, title_or_name)?;
+            if app.dashboard_focused_panel == 0 {
+                let mut sorted_items = vec![];
+                for cmd in &app.db.commands {
+                    sorted_items.push(crate::app::UsedItem {
+                        name: cmd.title.clone(),
+                        is_group: false,
+                        use_count: cmd.use_count,
+                    });
+                }
+                for grp in &app.db.groups {
+                    sorted_items.push(crate::app::UsedItem {
+                        name: grp.name.clone(),
+                        is_group: true,
+                        use_count: grp.use_count,
+                    });
+                }
+                sorted_items.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+                
+                if !sorted_items.is_empty() && app.dashboard_selected < sorted_items.len() {
+                    let selected_item = &sorted_items[app.dashboard_selected];
+                    let title_or_name = selected_item.name.clone();
+                    if selected_item.is_group {
+                        run_tui_group_execution(terminal, app, title_or_name)?;
+                    } else {
+                        run_tui_command_execution(terminal, app, title_or_name)?;
+                    }
+                }
+            } else {
+                if !app.db.history.is_empty() && app.dashboard_history_selected < app.db.history.len() {
+                    let idx = app.db.history.len() - 1 - app.dashboard_history_selected;
+                    let h = &app.db.history[idx];
+                    
+                    let title = if let Some(pos) = h.command_title.find(" -> ") {
+                        h.command_title[..pos].to_string()
+                    } else {
+                        h.command_title.clone()
+                    };
+                    
+                    if app.db.commands.iter().any(|c| c.title == title) {
+                        run_tui_command_execution(terminal, app, title)?;
+                    } else if app.db.groups.iter().any(|g| g.name == title) {
+                        run_tui_group_execution(terminal, app, title)?;
+                    }
                 }
             }
         }

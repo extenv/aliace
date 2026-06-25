@@ -19,8 +19,10 @@ The TUI provides operators with a visual console to manage registered commands, 
 | `D` | Remove Entry | Open the selector to delete command or group entries |
 | `E` | Export Database | Open the configuration panel to export backups |
 | `I` | Import Database | Open the configuration panel to restore backups |
-| `Up` / `Down` | Select Most Run | Navigate selection within the "Most Run Items" dashboard panel |
-| `Enter` / `R` | Run Highlighted | Execute the highlighted "Most Run" command or pipeline sequence |
+| `Tab` | Switch Focus | Toggle focus on Dashboard between Most Run panel and Execution History |
+| `F` | Toggle Favorite | Toggles the favorite status of the highlighted command or group in Most Run Items |
+| `Up` / `Down` | Navigate Panel | Scroll selection within the highlighted TUI dashboard panel |
+| `Enter` / `R` | Run / Rerun | Execute highlighted Most Run item, or rerun the selected history command |
 | `Esc` / `Q` | Exit Context | Return to the Dashboard or exit the application console |
 
 ---
@@ -29,10 +31,12 @@ The TUI provides operators with a visual console to manage registered commands, 
 
 The List Panel displays a dual-pane layout: a master list on the left and a detailed telemetry panel on the right.
 
-* **Context Switching**: Use the `Left` and `Right` arrow keys to switch between the **Single Commands** tab and the **Pipeline Groups** tab.
+* **Context Switching**: Use the `Left` and `Right` arrow keys to switch between the **Single**, **Group**, and **Favorites** tabs.
 * **Selection**: Navigate command entries using the `Up` and `Down` arrow keys.
+* **Live Filtering (Search)**: Press `/` while on any list screen to enter search mode. Typing dynamically filters the list by title, description, or script. Press `Esc` to clear search or exit search mode.
 * **Execution**: Press `Enter` or `R` to trigger execution of the selected item.
   * *Note: During execution, TUI rendering is suspended. The process executes directly in the native shell. When execution finishes, you are prompted to press `Enter` to restore TUI graphics.*
+* **Interactive List Reordering**: Press `Tab` to grab the selected item (highlighted in Yellow with a `🚀` prefix). While grabbed, use `Up`/`Down` keys to swap its position in the list (changes are persistently saved to the database). Press `Tab` again or `Esc` to release.
 * **Modification**: Press `E` to modify the highlighted item within the editor wizard.
 * **Deletion**: Press `D` to remove the highlighted item (triggers a confirmation popup modal).
 
@@ -93,15 +97,17 @@ aliace run <title_or_name>
 
 ---
 
-### Dynamic Argument Prompting (Enclosed in `<>`)
+### Dynamic Argument Prompting & Cancellation (Enclosed in `<>`)
 If a registered script contains template placeholders enclosed in angle brackets (e.g., `<message>`, `<branch>`), Aliace pauses execution and prompts the operator for runtime input:
 * **Configured Script**: `git commit -m "<message>"`
-* **Runtime Console Flow**:
+* **Runtime Flow**:
   ```
   Running command 'commit': git commit -m "<message>"
   Enter value for <message>: Initial release
   ```
   Aliace replaces the template tag with the input string and runs the resolved payload (`git commit -m "Initial release"`). The resolved script is recorded in the execution history.
+
+* **🚫 Cancellation**: Press `Ctrl + Q` at any prompt or while the command process is running to abort execution immediately. It will print `Execution cancelled by user` in red/bold and return to the TUI.
 
 ---
 
@@ -128,8 +134,8 @@ aliace command update --title <title> [--script <new_script>] [--desc <new_desc>
 # Delete a command entry
 aliace command delete --title <title>
 
-# List all command registry entries
-aliace command list
+# List all command registry entries (supports filtering & frequency sorting)
+aliace command list [--search <query>] [--most-run]
 ```
 
 #### CLI Groups:
@@ -143,6 +149,6 @@ aliace group update --name <name> [--desc <new_desc>] [--commands <new_c1,new_c2
 # Delete a pipeline group sequence
 aliace group delete --name <name>
 
-# List all pipeline group sequence entries
-aliace group list
+# List all pipeline group sequence entries (supports filtering & frequency sorting)
+aliace group list [--search <query>] [--most-run]
 ```

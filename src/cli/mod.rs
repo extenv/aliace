@@ -46,3 +46,10 @@ pub fn get_flag_value(args: &[String], flag: &str) -> Option<String> {
     }
     None
 }
+
+pub fn get_search_query_from_args(args: &[String]) -> Option<String> {
+    if let Some(val) = get_flag_value(args, "--search") {
+        return Some(val);
+    }
+    args.iter().find(|a| !a.starts_with('-')).cloned()
+}

@@ -184,6 +184,7 @@ fn save_group_form(app: &mut App) {
                 description: desc,
                 commands,
                 use_count: 0,
+                favorite: false,
             });
         }
         AppScreen::UpdateGroupForm => {

@@ -17,7 +17,14 @@ pub fn cli_run_command(title: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut script = cmd.script.clone();
     db.save()?;
     
-    script = process_placeholders(&script)?;
+    script = match process_placeholders(&script) {
+        Ok(s) => s,
+        Err(e) => {
+            use crossterm::style::Stylize;
+            eprintln!("\n{}", e.to_string().red().bold());
+            return Err(e);
+        }
+    };
     
     let start_time = std::time::Instant::now();
     
@@ -47,6 +54,21 @@ pub fn cli_run_command(title: &str) -> Result<(), Box<dyn std::error::Error>> {
         db.history.remove(0);
     }
     db.save()?;
+    
+    use crossterm::style::Stylize;
+    let title_styled = format!("'{}'", title).yellow().bold();
+    let duration_styled = format!("{}ms", duration.as_millis()).magenta().bold();
+    let status_styled = if status_str == "OK" {
+        "OK".green().bold()
+    } else {
+        "FAILED".red().bold()
+    };
+    println!(
+        "\nSingle Command {} execution completed in {}. Status: {}",
+        title_styled,
+        duration_styled,
+        status_styled
+    );
     
     Ok(())
 }
@@ -83,7 +105,14 @@ pub fn cli_run_group(name: &str) -> Result<(), Box<dyn std::error::Error>> {
             let mut script = cmd.script.clone();
             let _ = db_reload.save();
             
-            script = process_placeholders(&script)?;
+            script = match process_placeholders(&script) {
+                Ok(s) => s,
+                Err(e) => {
+                    use crossterm::style::Stylize;
+                    eprintln!("\n{}", e.to_string().red().bold());
+                    return Err(e);
+                }
+            };
             
             let start_time = std::time::Instant::now();
             let status = run_cmd(&script);
@@ -122,12 +151,17 @@ pub fn cli_run_group(name: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
     
     let group_duration = group_start_time.elapsed();
+    use crossterm::style::Stylize;
+    let name_styled = format!("'{}'", name).yellow().bold();
+    let duration_styled = format!("{}ms", group_duration.as_millis()).magenta().bold();
+    let ok_styled = format!("{} OK", success_count).green().bold();
+    let failed_styled = format!("{} FAILED", failed_count).red().bold();
     println!(
-        "\nGroup '{}' execution completed in {}ms. Status: {} OK, {} FAILED.",
-        name,
-        group_duration.as_millis(),
-        success_count,
-        failed_count
+        "\nGroup {} execution completed in {}. Status: {}, {}.",
+        name_styled,
+        duration_styled,
+        ok_styled,
+        failed_styled
     );
     
     let mut db_final = Database::load();
@@ -199,6 +233,60 @@ pub fn cli_delete_command(title_or_name: &str) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+fn read_line_raw(prompt: &str) -> Result<Option<String>, Box<dyn std::error::Error>> {
+    use crossterm::event::{self, Event, KeyCode, KeyModifiers, KeyEventKind};
+    use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
+    use std::io::{self, Write};
+
+    print!("{}", prompt);
+    io::stdout().flush()?;
+
+    enable_raw_mode()?;
+    let mut input = String::new();
+    
+    let res = loop {
+        match event::read() {
+            Ok(Event::Key(key)) => {
+                if key.kind == KeyEventKind::Press {
+                    if (key.code == KeyCode::Char('q') || key.code == KeyCode::Char('Q')) && key.modifiers.contains(KeyModifiers::CONTROL) {
+                        break Ok(None);
+                    }
+                    
+                    match key.code {
+                        KeyCode::Enter => {
+                            break Ok(Some(input));
+                        }
+                        KeyCode::Char(c) => {
+                            if c == 'c' && key.modifiers.contains(KeyModifiers::CONTROL) {
+                                break Ok(None);
+                            }
+                            input.push(c);
+                            print!("{}", c);
+                            io::stdout().flush()?;
+                        }
+                        KeyCode::Backspace => {
+                            if !input.is_empty() {
+                                input.pop();
+                                print!("\x08 \x08");
+                                io::stdout().flush()?;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            Err(e) => {
+                break Err(e.into());
+            }
+            _ => {}
+        }
+    };
+    
+    let _ = disable_raw_mode();
+    println!();
+    res
+}
+
 fn process_placeholders(script: &str) -> Result<String, Box<dyn std::error::Error>> {
     let mut resolved_script = script.to_string();
     let mut chars = script.char_indices().peekable();
@@ -227,14 +315,19 @@ fn process_placeholders(script: &str) -> Result<String, Box<dyn std::error::Erro
     }
     
     if !tags.is_empty() {
-        use std::io::{Write, stdin, stdout};
         for tag in tags {
-            print!("Enter value for <{}>: ", tag);
-            stdout().flush()?;
-            let mut input = String::new();
-            stdin().read_line(&mut input)?;
-            let input_val = input.trim_end_matches('\r').trim_end_matches('\n');
-            resolved_script = resolved_script.replace(&format!("<{}>", tag), input_val);
+            let prompt = format!("Enter value for <{}>: ", tag);
+            match read_line_raw(&prompt)? {
+                Some(val) => {
+                    resolved_script = resolved_script.replace(&format!("<{}>", tag), &val);
+                }
+                None => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Interrupted,
+                        "Execution cancelled by user"
+                    ).into());
+                }
+            }
         }
     }
     
@@ -244,14 +337,70 @@ fn process_placeholders(script: &str) -> Result<String, Box<dyn std::error::Erro
 #[cfg(target_os = "windows")]
 fn run_cmd(script: &str) -> std::io::Result<std::process::ExitStatus> {
     use std::os::windows::process::CommandExt;
-    std::process::Command::new("cmd")
+    use crossterm::event::{self, Event, KeyCode, KeyModifiers, KeyEventKind};
+    use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
+
+    let mut child = std::process::Command::new("cmd")
         .raw_arg(&format!("/C \"{}\"", script))
-        .status()
+        .spawn()?;
+
+    let _ = enable_raw_mode();
+
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Ok(status);
+        }
+        
+        if let Ok(true) = event::poll(std::time::Duration::from_millis(50)) {
+            if let Ok(Event::Key(key)) = event::read() {
+                if key.kind == KeyEventKind::Press {
+                    if (key.code == KeyCode::Char('q') || key.code == KeyCode::Char('Q')) && key.modifiers.contains(KeyModifiers::CONTROL) {
+                        use crossterm::style::Stylize;
+                        println!("\n{}", "[Execution cancelled by user]".red().bold());
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        break Err(std::io::Error::new(std::io::ErrorKind::Interrupted, "Cancelled by user"));
+                    }
+                }
+            }
+        }
+    };
+
+    let _ = disable_raw_mode();
+    status
 }
 
 #[cfg(not(target_os = "windows"))]
 fn run_cmd(script: &str) -> std::io::Result<std::process::ExitStatus> {
-    std::process::Command::new("sh")
+    use crossterm::event::{self, Event, KeyCode, KeyModifiers, KeyEventKind};
+    use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
+
+    let mut child = std::process::Command::new("sh")
         .args(&["-c", script])
-        .status()
+        .spawn()?;
+
+    let _ = enable_raw_mode();
+
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Ok(status);
+        }
+        
+        if let Ok(true) = event::poll(std::time::Duration::from_millis(50)) {
+            if let Ok(Event::Key(key)) = event::read() {
+                if key.kind == KeyEventKind::Press {
+                    if (key.code == KeyCode::Char('q') || key.code == KeyCode::Char('Q')) && key.modifiers.contains(KeyModifiers::CONTROL) {
+                        use crossterm::style::Stylize;
+                        println!("\n{}", "[Execution cancelled by user]".red().bold());
+                        let _ = child.kill();
+                        let _ = child.wait();
+                        break Err(std::io::Error::new(std::io::ErrorKind::Interrupted, "Cancelled by user"));
+                    }
+                }
+            }
+        }
+    };
+
+    let _ = disable_raw_mode();
+    status
 }

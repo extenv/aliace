@@ -1,5 +1,5 @@
 use crate::db::{Database, CommandModel, GroupModel};
-use crate::cli::get_flag_value;
+use crate::cli::{get_flag_value, get_search_query_from_args};
 
 pub fn handle_cli_command(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     if args.is_empty() {
@@ -26,6 +26,7 @@ pub fn handle_cli_command(args: &[String]) -> Result<(), Box<dyn std::error::Err
                 script,
                 group,
                 use_count: 0,
+                favorite: false,
             });
             db.save()?;
             println!("Command added successfully.");
@@ -61,17 +62,40 @@ pub fn handle_cli_command(args: &[String]) -> Result<(), Box<dyn std::error::Err
         }
         "list" => {
             let db = Database::load();
-            if db.commands.is_empty() {
-                println!("No commands stored.");
+            let search_query = get_search_query_from_args(&args[1..]);
+            let most_run = args.iter().any(|a| a == "--most-run");
+            
+            let mut filtered: Vec<CommandModel> = db.commands.clone();
+            
+            if let Some(ref q) = search_query {
+                let q_lower = q.to_lowercase();
+                filtered.retain(|cmd| {
+                    cmd.title.to_lowercase().contains(&q_lower)
+                        || cmd.description.to_lowercase().contains(&q_lower)
+                        || cmd.script.to_lowercase().contains(&q_lower)
+                });
+            }
+            
+            if most_run {
+                filtered.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+            }
+            
+            if filtered.is_empty() {
+                if search_query.is_some() {
+                    println!("No matching commands found.");
+                } else {
+                    println!("No commands stored.");
+                }
             } else {
-                println!("{:<20} {:<30} {}", "TITLE", "DESCRIPTION", "SCRIPT");
-                println!("{}", "-".repeat(70));
-                for cmd in &db.commands {
+                println!("{:<20} {:<12} {:<30} {}", "TITLE", "RUNS", "DESCRIPTION", "SCRIPT");
+                println!("{}", "-".repeat(80));
+                for cmd in &filtered {
                     let group_str = match &cmd.group {
                         Some(g) => format!(" [{}]", g),
                         None => String::new(),
                     };
-                    println!("{:<20} {:<30} {}", format!("{}{}", cmd.title, group_str), cmd.description, cmd.script);
+                    let fav_star = if cmd.favorite { " ★" } else { "" };
+                    println!("{:<20} {:<12} {:<30} {}", format!("{}{}{}", cmd.title, group_str, fav_star), cmd.use_count, cmd.description, cmd.script);
                 }
             }
         }
@@ -111,6 +135,7 @@ pub fn handle_cli_group(args: &[String]) -> Result<(), Box<dyn std::error::Error
                 description: desc,
                 commands,
                 use_count: 0,
+                favorite: false,
             });
             db.save()?;
             println!("Group added successfully.");
@@ -147,13 +172,36 @@ pub fn handle_cli_group(args: &[String]) -> Result<(), Box<dyn std::error::Error
         }
         "list" => {
             let db = Database::load();
-            if db.groups.is_empty() {
-                println!("No groups stored.");
+            let search_query = get_search_query_from_args(&args[1..]);
+            let most_run = args.iter().any(|a| a == "--most-run");
+            
+            let mut filtered: Vec<GroupModel> = db.groups.clone();
+            
+            if let Some(ref q) = search_query {
+                let q_lower = q.to_lowercase();
+                filtered.retain(|g| {
+                    g.name.to_lowercase().contains(&q_lower)
+                        || g.description.to_lowercase().contains(&q_lower)
+                        || g.commands.iter().any(|c| c.to_lowercase().contains(&q_lower))
+                });
+            }
+            
+            if most_run {
+                filtered.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+            }
+            
+            if filtered.is_empty() {
+                if search_query.is_some() {
+                    println!("No matching groups found.");
+                } else {
+                    println!("No groups stored.");
+                }
             } else {
-                println!("{:<20} {:<30} {}", "GROUP NAME", "DESCRIPTION", "COMMANDS SEQUENCE");
-                println!("{}", "-".repeat(80));
-                for g in &db.groups {
-                    println!("{:<20} {:<30} {}", g.name, g.description, g.commands.join(", "));
+                println!("{:<20} {:<12} {:<30} {}", "GROUP NAME", "RUNS", "DESCRIPTION", "COMMANDS SEQUENCE");
+                println!("{}", "-".repeat(90));
+                for g in &filtered {
+                    let fav_star = if g.favorite { " ★" } else { "" };
+                    println!("{:<20} {:<12} {:<30} {}", format!("{}{}", g.name, fav_star), g.use_count, g.description, g.commands.join(", "));
                 }
             }
         }

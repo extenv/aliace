@@ -102,6 +102,7 @@ fn save_form(app: &mut App) {
                 script,
                 group,
                 use_count: 0,
+                favorite: false,
             });
         }
         AppScreen::UpdateCommandForm => {

@@ -34,6 +34,7 @@ pub enum GroupFormField {
     Cancel,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UsedItem {
     pub name: String,
     pub is_group: bool,
@@ -84,6 +85,11 @@ pub struct App {
     
     pub tick_count: u64,
     pub dashboard_selected: usize,
+    pub list_search_query: String,
+    pub list_is_searching: bool,
+    pub list_grabbed: Option<usize>,
+    pub dashboard_focused_panel: usize,
+    pub dashboard_history_selected: usize,
 }
 
 impl App {
@@ -118,6 +124,11 @@ impl App {
             import_message: None,
             tick_count: 0,
             dashboard_selected: 0,
+            list_search_query: String::new(),
+            list_is_searching: true,
+            list_grabbed: None,
+            dashboard_focused_panel: 0,
+            dashboard_history_selected: 0,
         }
     }
 
@@ -159,5 +170,113 @@ impl App {
         self.group_avail_selected = 0;
         self.group_error = None;
         self.update_target_group_name = grp.name.clone();
+    }
+
+    pub fn get_filtered_commands(&self) -> Vec<CommandModel> {
+        self.db.commands.iter()
+            .filter(|cmd| {
+                if self.list_search_query.is_empty() {
+                    true
+                } else {
+                    let q = self.list_search_query.to_lowercase();
+                    cmd.title.to_lowercase().contains(&q)
+                        || cmd.description.to_lowercase().contains(&q)
+                        || cmd.script.to_lowercase().contains(&q)
+                }
+            })
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_filtered_groups(&self) -> Vec<GroupModel> {
+        self.db.groups.iter()
+            .filter(|grp| {
+                if self.list_search_query.is_empty() {
+                    true
+                } else {
+                    let q = self.list_search_query.to_lowercase();
+                    grp.name.to_lowercase().contains(&q)
+                        || grp.description.to_lowercase().contains(&q)
+                        || grp.commands.iter().any(|c| c.to_lowercase().contains(&q))
+                }
+            })
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_filtered_most_run(&self) -> Vec<UsedItem> {
+        let mut sorted_items = vec![];
+        for cmd in &self.db.commands {
+            sorted_items.push(UsedItem {
+                name: cmd.title.clone(),
+                is_group: false,
+                use_count: cmd.use_count,
+            });
+        }
+        for grp in &self.db.groups {
+            sorted_items.push(UsedItem {
+                name: grp.name.clone(),
+                is_group: true,
+                use_count: grp.use_count,
+            });
+        }
+        sorted_items.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+
+        sorted_items.into_iter()
+            .filter(|item| {
+                if self.list_search_query.is_empty() {
+                    true
+                } else {
+                    let q = self.list_search_query.to_lowercase();
+                    item.name.to_lowercase().contains(&q)
+                }
+            })
+            .collect()
+    }
+
+    pub fn get_filtered_favorites(&self) -> Vec<UsedItem> {
+        let mut items = vec![];
+        for cmd in &self.db.commands {
+            if cmd.favorite {
+                items.push(UsedItem {
+                    name: cmd.title.clone(),
+                    is_group: false,
+                    use_count: cmd.use_count,
+                });
+            }
+        }
+        for grp in &self.db.groups {
+            if grp.favorite {
+                items.push(UsedItem {
+                    name: grp.name.clone(),
+                    is_group: true,
+                    use_count: grp.use_count,
+                });
+            }
+        }
+        items.into_iter()
+            .filter(|item| {
+                if self.list_search_query.is_empty() {
+                    true
+                } else {
+                    let q = self.list_search_query.to_lowercase();
+                    item.name.to_lowercase().contains(&q)
+                }
+            })
+            .collect()
+    }
+
+    pub fn toggle_favorite(&mut self, name: &str, is_group: bool) {
+        if is_group {
+            if let Some(pos) = self.db.groups.iter().position(|g| g.name == name) {
+                self.db.groups[pos].favorite = !self.db.groups[pos].favorite;
+                let _ = self.db.save();
+            }
+        } else {
+            if let Some(pos) = self.db.commands.iter().position(|c| c.title == name) {
+                self.db.commands[pos].favorite = !self.db.commands[pos].favorite;
+                let _ = self.db.save();
+            }
+        }
     }
 }

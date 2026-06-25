@@ -24,10 +24,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let command = args[1].as_str();
     match command {
         "-v" | "--version" | "version" => {
-            println!("v0.1.1");
+            println!("v1.0.0");
         }
         "list" => {
-            run_tui_list()?;
+            let query = crate::cli::get_search_query_from_args(&args[2..]);
+            run_tui_list(query)?;
         }
         "add" => {
             run_tui_add()?;
@@ -43,14 +44,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     run_tui_update_command(target)?;
                 }
             } else {
-                run_tui_update_list()?;
+                let query = crate::cli::get_search_query_from_args(&args[2..]);
+                run_tui_update_list(query)?;
             }
         }
         "delete" => {
             if args.len() >= 3 {
                 cli_delete_command(&args[2])?;
             } else {
-                run_tui_delete_list()?;
+                let query = crate::cli::get_search_query_from_args(&args[2..]);
+                run_tui_delete_list(query)?;
             }
         }
         "run" => {
@@ -110,11 +113,11 @@ fn print_help() {
            aliace command add --title <title> --script <script> --desc <desc> [--group <group>]\n\
            aliace command update --title <title> [--script <script>] [--desc <desc>] [--group <group>]\n\
            aliace command delete --title <title>\n\
-           aliace command list\n\n\
+           aliace command list [--search <query>] [--most-run]\n\n\
          CLI Groups:\n\
            aliace group add --name <name> --desc <desc> [--commands <c1,c2,...>]\n\
            aliace group update --name <name> [--desc <desc>] [--commands <c1,c2,...>]\n\
            aliace group delete --name <name>\n\
-           aliace group list\n"
+           aliace group list [--search <query>] [--most-run]\n"
     );
 }

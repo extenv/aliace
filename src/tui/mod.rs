@@ -9,51 +9,54 @@ use ratatui::DefaultTerminal;
 use std::time::Duration;
 use crossterm::event::{self, Event, KeyEventKind};
 
-pub fn run_tui_app(initial_screen: AppScreen) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run_tui_app(initial_screen: AppScreen, query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let mut terminal = ratatui::init();
-    let app_result = run_app_loop(&mut terminal, initial_screen);
+    let app_result = run_app_loop(&mut terminal, initial_screen, query);
     ratatui::restore();
     app_result
 }
 
 pub fn run_tui_main_dashboard() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::Dashboard)
+    run_tui_app(AppScreen::Dashboard, None)
 }
 
-pub fn run_tui_list() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::ListCommands)
+pub fn run_tui_list(query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    run_tui_app(AppScreen::ListCommands, query)
 }
 
 pub fn run_tui_add() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::AddCommand)
+    run_tui_app(AppScreen::AddCommand, None)
 }
 
-pub fn run_tui_update_list() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::UpdateCommandList)
+pub fn run_tui_update_list(query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    run_tui_app(AppScreen::UpdateCommandList, query)
 }
 
 pub fn run_tui_update_command(_title: &str) -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::UpdateCommandForm)
+    run_tui_app(AppScreen::UpdateCommandForm, None)
 }
 
 pub fn run_tui_update_group(_name: &str) -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::UpdateGroupForm)
+    run_tui_app(AppScreen::UpdateGroupForm, None)
 }
 
-pub fn run_tui_delete_list() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::DeleteCommandList)
+pub fn run_tui_delete_list(query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    run_tui_app(AppScreen::DeleteCommandList, query)
 }
 
 pub fn run_tui_export() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::ExportMenu)
+    run_tui_app(AppScreen::ExportMenu, None)
 }
 
 pub fn run_tui_import() -> Result<(), Box<dyn std::error::Error>> {
-    run_tui_app(AppScreen::ImportForm)
+    run_tui_app(AppScreen::ImportForm, None)
 }
 
-fn run_app_loop(terminal: &mut DefaultTerminal, initial_screen: AppScreen) -> Result<(), Box<dyn std::error::Error>> {
+fn run_app_loop(terminal: &mut DefaultTerminal, initial_screen: AppScreen, query: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new(initial_screen);
+    if let Some(q) = query {
+        app.list_search_query = q;
+    }
     
     if let AppScreen::UpdateCommandForm = initial_screen {
         let args: Vec<String> = std::env::args().collect();

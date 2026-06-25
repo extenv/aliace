@@ -66,6 +66,8 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let footer_text = match &app.screen {
         AppScreen::Dashboard => {
             Line::from(vec![
+                Span::styled(" [Tab] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Switch ", Style::default().fg(Color::Gray)),
                 Span::styled(" [L] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::styled("List ", Style::default().fg(Color::Gray)),
                 Span::styled(" [A] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
@@ -88,48 +90,66 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         AppScreen::ListCommands => {
             Line::from(vec![
                 Span::styled(" [←/→] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled("Switch Tab ", Style::default().fg(Color::Gray)),
+                Span::styled("Tab ", Style::default().fg(Color::Gray)),
+                Span::styled(" [Tab] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("Grab/Release ", Style::default().fg(Color::Gray)),
                 Span::styled(" [↑/↓] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled("Select ", Style::default().fg(Color::Gray)),
+                Span::styled("Move/Select ", Style::default().fg(Color::Gray)),
+                Span::styled(" [/] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Search ", Style::default().fg(Color::Gray)),
+                Span::styled(" [F] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("Fav ", Style::default().fg(Color::Gray)),
                 Span::styled(" [Enter/R] ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                Span::styled("Run Selected ", Style::default().fg(Color::Gray)),
+                Span::styled("Run ", Style::default().fg(Color::Gray)),
                 Span::styled(" [E] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                 Span::styled("Edit ", Style::default().fg(Color::Gray)),
                 Span::styled(" [D] ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-                Span::styled("Delete ", Style::default().fg(Color::Gray)),
+                Span::styled("Del ", Style::default().fg(Color::Gray)),
                 Span::styled(" [A] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-                Span::styled("Add Cmd ", Style::default().fg(Color::Gray)),
+                Span::styled("AddCmd ", Style::default().fg(Color::Gray)),
                 Span::styled(" [G] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-                Span::styled("Add Group ", Style::default().fg(Color::Gray)),
+                Span::styled("AddGrp ", Style::default().fg(Color::Gray)),
                 Span::styled(" | ", Style::default().fg(Color::DarkGray)),
                 Span::styled(" [Esc] ", Style::default().fg(Color::Gray)),
-                Span::styled("Back to Menu", Style::default().fg(Color::Gray)),
+                Span::styled("Back", Style::default().fg(Color::Gray)),
             ])
         }
         AppScreen::UpdateCommandList => {
             Line::from(vec![
                 Span::styled(" [←/→] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled("Switch Tab ", Style::default().fg(Color::Gray)),
+                Span::styled("Tab ", Style::default().fg(Color::Gray)),
+                Span::styled(" [Tab] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("Grab/Release ", Style::default().fg(Color::Gray)),
                 Span::styled(" [↑/↓] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled("Select ", Style::default().fg(Color::Gray)),
+                Span::styled("Move/Select ", Style::default().fg(Color::Gray)),
+                Span::styled(" [/] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Search ", Style::default().fg(Color::Gray)),
+                Span::styled(" [F] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("Fav ", Style::default().fg(Color::Gray)),
                 Span::styled(" [Enter] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-                Span::styled("Edit Selected ", Style::default().fg(Color::Gray)),
+                Span::styled("Edit ", Style::default().fg(Color::Gray)),
                 Span::styled(" | ", Style::default().fg(Color::DarkGray)),
                 Span::styled(" [Esc] ", Style::default().fg(Color::Gray)),
-                Span::styled("Back to Menu", Style::default().fg(Color::Gray)),
+                Span::styled("Back", Style::default().fg(Color::Gray)),
             ])
         }
         AppScreen::DeleteCommandList => {
             Line::from(vec![
                 Span::styled(" [←/→] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled("Switch Tab ", Style::default().fg(Color::Gray)),
+                Span::styled("Tab ", Style::default().fg(Color::Gray)),
+                Span::styled(" [Tab] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("Grab/Release ", Style::default().fg(Color::Gray)),
                 Span::styled(" [↑/↓] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::styled("Select ", Style::default().fg(Color::Gray)),
+                Span::styled("Move/Select ", Style::default().fg(Color::Gray)),
+                Span::styled(" [/] ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                Span::styled("Search ", Style::default().fg(Color::Gray)),
+                Span::styled(" [F] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::styled("Fav ", Style::default().fg(Color::Gray)),
                 Span::styled(" [Enter/D] ", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
-                Span::styled("Delete Selected ", Style::default().fg(Color::Gray)),
+                Span::styled("Delete ", Style::default().fg(Color::Gray)),
                 Span::styled(" | ", Style::default().fg(Color::DarkGray)),
                 Span::styled(" [Esc] ", Style::default().fg(Color::Gray)),
-                Span::styled("Back to Menu", Style::default().fg(Color::Gray)),
+                Span::styled("Back", Style::default().fg(Color::Gray)),
             ])
         }
         AppScreen::AddCommand | AppScreen::UpdateCommandForm => {
