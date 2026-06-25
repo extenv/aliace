@@ -1,75 +1,77 @@
 # Aliace
 
-Aliace is a fast, lightweight, and keyboard-driven command-line command and sequence group manager built in Rust with `ratatui` and `crossterm`. 
 
-It enables developers to save long, complex terminal commands, organize them into sequential execution groups, monitor run statistics, and run them either interactively via a beautiful TUI or directly through CLI scripting.
+Aliace is a high-performance, keyboard-driven command registry and execution orchestration utility designed to streamline developer workflows and automate command execution. Built in Rust, Aliace delivers a responsive Terminal User Interface (TUI) alongside a robust Command Line Interface (CLI) for headless scripting and automation.
+
+Aliace enables software engineers and system administrators to catalog complex shell commands, orchestrate sequential execution groups, capture execution telemetry, and define dynamic parameter bindings—all backed by a lightweight, portable JSON registry.
 
 ![Aliace Dashboard](docs/ss.png)
+---
+
+## 🔑 Key Features & Business Value
+
+* **Unified Command Registry**: Eliminate command fragmentation by maintaining a single, local JSON-serialized database of frequently used commands.
+* **Orchestration & Workflow Pipelines**: Group commands into sequential, ordered execution pipelines. Pipelines stop immediately if any step fails (non-zero exit code), ensuring system safety.
+* **Dynamic Parameter Binding**: Enclose command placeholders in angle brackets (e.g., `<branch>`, `<message>`) to prompt the operator for inputs dynamically during execution.
+* **Execution Telemetry & Analytics**: Gain insight into operational history with usage counts, duration logs, and execution status tracking.
+* **Dual Operation Mode**: Seamlessly transition from a visual, interactive dashboard TUI to a scripting-friendly CLI interface.
+* **Zero Dependency musl Binaries**: Cross-compile to standalone binaries with no runtime dependencies, simplifying enterprise distribution.
 
 ---
 
-## 🚀 Installation & Setup
+## 🚀 Installation & Deployment
 
 ### Prerequisites
-You need the [Rust toolchain (cargo)](https://rustup.rs/) installed on your machine.
+Compilation requires the [Rust toolchain](https://rustup.rs/) (Cargo) to be configured on the host machine.
 
-### 1. Build the Binary
-Clone the repository, navigate to the directory, and compile in release mode:
+### 1. Compilation
+Clone the repository and compile the binaries using the release profile:
 ```powershell
 cargo build --release
 ```
 
-The compiled release executable will be generated at:
+The optimized, target-specific binary is compiled to:
 * **Windows**: `target/release/aliace.exe`
 * **macOS/Linux**: `target/release/aliace`
 
-### 2. Install to PATH
-To run `aliace` from any terminal directory, add the compiled binary to your system's PATH.
+### 2. Path Configuration
+To invoke `aliace` globally, add the compiled binary to your system path.
 
 #### Windows (PowerShell):
 ```powershell
-# Copy to a folder in your PATH, e.g., a custom binaries directory
-Copy-Item target\release\aliace.exe -Destination "$env:USERPROFILE\aliace\bin\"
+# Deploy the executable to a custom binary directory in your system PATH
+Copy-Item target\release\aliace.exe -Destination "$env:USERPROFILE\bin\"
 ```
-Then Setup `Environment Variable`
+then setup `Environment Variables`
 
 #### macOS / Linux:
 ```bash
-# Copy to /usr/local/bin or ~/.local/bin
+# Move the compiled binary to a shared user bin folder
 cp target/release/aliace /usr/local/bin/
 ```
 
 ---
 
-## 📖 How to Use
+## 📖 Operational Overview
 
-Aliace has two modes of operation: **Interactive TUI** and **CLI Scripting**.
-
-### 1. Interactive TUI
-Launch the full dashboard to visually manage and trigger commands:
+### 1. Interactive Dashboard (TUI)
+Launch the visual management dashboard by executing `aliace` with no arguments:
 ```bash
 aliace
 ```
+You can also launch directly into sub-panels (e.g., `aliace list`, `aliace add`, `aliace update`, `aliace delete`, `aliace export`, `aliace import`).
 
-Or open the TUI directly to a specific screen:
-* `aliace list` - Interactive list & manage screen
-* `aliace add` - Interactive screen to register a new command
-* `aliace update` - Select and edit registered commands/groups
-* `aliace delete` - Select and delete registered commands/groups
-* `aliace export` - Visual backup exporter
-* `aliace import` - Visual backup importer
-
-### 2. CLI Scripting
-Execute commands or manage database entries directly from your shell/scripts without entering the TUI:
+### 2. Headless Automation (CLI)
+Automate registry administration or trigger workflows directly in CI/CD pipelines or shell scripts:
 ```bash
-# Execute a command or group sequence directly
-aliace run <title>
+# Execute a single command or pipeline group directly
+aliace run <title_or_name>
 
-# Add a single command via CLI
-aliace command add --title "build" --script "cargo build --release" --desc "Build release binary"
+# Register a command programmatically
+aliace command add --title "build" --script "cargo build --release" --desc "Compile release binary"
 
-# Add a group sequence via CLI
-aliace group add --name "deploy" --desc "Build & Test sequence" --commands "build,test"
+# Assemble a pipeline group programmatically
+aliace group add --name "deploy" --desc "Build and run integration tests" --commands "build,test"
 ```
 
-For detailed usage guidelines on TUI navigation, shortcuts, and CLI scripting options, please refer to the [Usage Guide](docs/USAGE.md).
+For complete instructions on interactive hotkeys, dynamic argument prompt usage, and administrative CLI flags, refer to the [Operational Reference Guide](docs/USAGE.md).

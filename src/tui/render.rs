@@ -38,7 +38,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let header = Paragraph::new(Line::from(vec![
         Span::styled(header_title, Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
         Span::styled(" | ", Style::default().fg(Color::DarkGray)),
-        Span::styled("CWD: ", Style::default().fg(Color::Gray)),
+        Span::styled("Directory: ", Style::default().fg(Color::Gray)),
         Span::styled(cwd, Style::default().fg(Color::Green)),
     ]))
     .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).border_style(Style::default().fg(Color::DarkGray)));

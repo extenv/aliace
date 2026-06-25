@@ -14,20 +14,14 @@ pub fn cli_run_command(title: &str) -> Result<(), Box<dyn std::error::Error>> {
     
     println!("Running command '{}': {}", cmd.title, cmd.script);
     cmd.use_count += 1;
-    let script = cmd.script.clone();
+    let mut script = cmd.script.clone();
     db.save()?;
+    
+    script = process_placeholders(&script)?;
     
     let start_time = std::time::Instant::now();
     
-    let status = if cfg!(target_os = "windows") {
-        std::process::Command::new("cmd")
-            .args(&["/C", &script])
-            .status()
-    } else {
-        std::process::Command::new("sh")
-            .args(&["-c", &script])
-            .status()
-    };
+    let status = run_cmd(&script);
     
     let duration = start_time.elapsed();
     let status_str = match &status {
@@ -54,7 +48,6 @@ pub fn cli_run_command(title: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
     db.save()?;
     
-    println!("\nExecution completed with status: {}", status_str);
     Ok(())
 }
 
@@ -87,19 +80,13 @@ pub fn cli_run_group(name: &str) -> Result<(), Box<dyn std::error::Error>> {
         
         if let Some(cmd) = cmd_opt {
             cmd.use_count += 1;
-            let script = cmd.script.clone();
+            let mut script = cmd.script.clone();
             let _ = db_reload.save();
             
+            script = process_placeholders(&script)?;
+            
             let start_time = std::time::Instant::now();
-            let status = if cfg!(target_os = "windows") {
-                std::process::Command::new("cmd")
-                    .args(&["/C", &script])
-                    .status()
-            } else {
-                std::process::Command::new("sh")
-                    .args(&["-c", &script])
-                    .status()
-            };
+            let status = run_cmd(&script);
             
             let duration = start_time.elapsed();
             let status_str = match &status {
@@ -210,4 +197,61 @@ pub fn cli_delete_command(title_or_name: &str) -> Result<(), Box<dyn std::error:
         println!("Deletion cancelled.");
     }
     Ok(())
+}
+
+fn process_placeholders(script: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let mut resolved_script = script.to_string();
+    let mut chars = script.char_indices().peekable();
+    let mut tags = Vec::new();
+    
+    while let Some((_, c)) = chars.next() {
+        if c == '<' {
+            let mut name = String::new();
+            let mut closed = false;
+            while let Some((_, next_c)) = chars.next() {
+                if next_c == '>' {
+                    closed = true;
+                    break;
+                } else if next_c == '<' {
+                    name.clear();
+                } else {
+                    name.push(next_c);
+                }
+            }
+            if closed && !name.is_empty() {
+                if !tags.contains(&name) {
+                    tags.push(name);
+                }
+            }
+        }
+    }
+    
+    if !tags.is_empty() {
+        use std::io::{Write, stdin, stdout};
+        for tag in tags {
+            print!("Enter value for <{}>: ", tag);
+            stdout().flush()?;
+            let mut input = String::new();
+            stdin().read_line(&mut input)?;
+            let input_val = input.trim_end_matches('\r').trim_end_matches('\n');
+            resolved_script = resolved_script.replace(&format!("<{}>", tag), input_val);
+        }
+    }
+    
+    Ok(resolved_script)
+}
+
+#[cfg(target_os = "windows")]
+fn run_cmd(script: &str) -> std::io::Result<std::process::ExitStatus> {
+    use std::os::windows::process::CommandExt;
+    std::process::Command::new("cmd")
+        .raw_arg(&format!("/C \"{}\"", script))
+        .status()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn run_cmd(script: &str) -> std::io::Result<std::process::ExitStatus> {
+    std::process::Command::new("sh")
+        .args(&["-c", script])
+        .status()
 }
