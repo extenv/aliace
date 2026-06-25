@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Release - ${{ matrix.platform.release_for }}
+    strategy:
+      matrix:
+        platform:
+          - release_for: Linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            bin: aliace
+            asset_name: aliace-linux-x86_64.tar.gz
+
+          - release_for: Windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: aliace.exe
+            asset_name: aliace-windows-x86_64.zip
+
+          - release_for: macOS-x86_64
+            os: macos-latest
+            target: x86_64-apple-darwin
+            bin: aliace
+            asset_name: aliace-macos-x86_64.tar.gz
+
+          - release_for: macOS-aarch64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            bin: aliace
+            asset_name: aliace-macos-aarch64.tar.gz
+
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.target }}
+
+      - name: Install musl-tools
+        if: matrix.platform.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Build Binary
+        run: cargo build --release --target ${{ matrix.platform.target }}
+
+      - name: Package Binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          Compress-Archive -Path ${{ matrix.platform.bin }} -DestinationPath ${{ matrix.platform.asset_name }}
+
+      - name: Package Binary (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          tar -czf ${{ matrix.platform.asset_name }} ${{ matrix.platform.bin }}
+
+      - name: Upload Binaries to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/${{ matrix.platform.target }}/release/${{ matrix.platform.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
