@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let command = args[1].as_str();
     match command {
         "-v" | "--version" | "version" => {
-            println!("v0.1.0");
+            println!("v0.1.1");
         }
         "list" => {
             run_tui_list()?;

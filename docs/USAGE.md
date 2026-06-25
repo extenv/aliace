@@ -19,6 +19,8 @@ The TUI provides operators with a visual console to manage registered commands, 
 | `D` | Remove Entry | Open the selector to delete command or group entries |
 | `E` | Export Database | Open the configuration panel to export backups |
 | `I` | Import Database | Open the configuration panel to restore backups |
+| `Up` / `Down` | Select Most Run | Navigate selection within the "Most Run Items" dashboard panel |
+| `Enter` / `R` | Run Highlighted | Execute the highlighted "Most Run" command or pipeline sequence |
 | `Esc` / `Q` | Exit Context | Return to the Dashboard or exit the application console |
 
 ---

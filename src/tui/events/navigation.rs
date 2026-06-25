@@ -1,8 +1,16 @@
 use crate::app::{App, AppScreen};
 use crate::db::Database;
+use crate::tui::{run_tui_command_execution, run_tui_group_execution};
 use crossterm::event::{KeyCode, KeyEvent};
 
-pub fn handle_dashboard_key(app: &mut App, key: KeyEvent) -> Result<(), Box<dyn std::error::Error>> {
+pub fn handle_dashboard_key(app: &mut App, key: KeyEvent, terminal: &mut ratatui::DefaultTerminal) -> Result<(), Box<dyn std::error::Error>> {
+    let sorted_len = app.db.commands.len() + app.db.groups.len();
+    if sorted_len == 0 {
+        app.dashboard_selected = 0;
+    } else if app.dashboard_selected >= sorted_len {
+        app.dashboard_selected = sorted_len - 1;
+    }
+
     match key.code {
         KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
             app.should_quit = true;
@@ -39,6 +47,44 @@ pub fn handle_dashboard_key(app: &mut App, key: KeyEvent) -> Result<(), Box<dyn 
             app.screen = AppScreen::ImportForm;
             app.import_path = String::new();
             app.import_message = None;
+        }
+        KeyCode::Up => {
+            if app.dashboard_selected > 0 {
+                app.dashboard_selected -= 1;
+            }
+        }
+        KeyCode::Down => {
+            if sorted_len > 0 && app.dashboard_selected < sorted_len - 1 {
+                app.dashboard_selected += 1;
+            }
+        }
+        KeyCode::Enter | KeyCode::Char('r') | KeyCode::Char('R') => {
+            let mut sorted_items = vec![];
+            for cmd in &app.db.commands {
+                sorted_items.push(crate::app::UsedItem {
+                    name: cmd.title.clone(),
+                    is_group: false,
+                    use_count: cmd.use_count,
+                });
+            }
+            for grp in &app.db.groups {
+                sorted_items.push(crate::app::UsedItem {
+                    name: grp.name.clone(),
+                    is_group: true,
+                    use_count: grp.use_count,
+                });
+            }
+            sorted_items.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+            
+            if !sorted_items.is_empty() && app.dashboard_selected < sorted_items.len() {
+                let selected_item = &sorted_items[app.dashboard_selected];
+                let title_or_name = selected_item.name.clone();
+                if selected_item.is_group {
+                    run_tui_group_execution(terminal, app, title_or_name)?;
+                } else {
+                    run_tui_command_execution(terminal, app, title_or_name)?;
+                }
+            }
         }
         _ => {}
     }

@@ -106,30 +106,38 @@ pub fn draw_dashboard(frame: &mut Frame, area: Rect, app: &App) {
     let limit = bottom_chunks[0].height.saturating_sub(4) as usize;
     let top_items = sorted_items.iter().take(limit);
 
-    let mut stats_text = vec![
-        Line::from(""),
-    ];
-
+    let mut list_items = vec![];
     if sorted_items.is_empty() {
-        stats_text.push(Line::from("  No runs logged yet."));
+        list_items.push(ListItem::new("  No runs logged yet."));
     } else {
         for (i, item) in top_items.enumerate() {
             let type_tag = if item.is_group { "[Group]  " } else { "[Single] " };
             let type_color = if item.is_group { Color::Magenta } else { Color::Green };
             
-            stats_text.push(Line::from(vec![
-                Span::styled(format!("  {}. ", i + 1), Style::default().fg(Color::White)),
+            list_items.push(ListItem::new(Line::from(vec![
+                Span::styled(format!(" {}. ", i + 1), Style::default().fg(Color::White)),
                 Span::styled(type_tag, Style::default().fg(type_color)),
                 Span::styled(format!("{:<15}", item.name), Style::default().fg(Color::White)),
                 Span::styled(" Used: ", Style::default().fg(Color::DarkGray)),
                 Span::styled(format!("{:<4}", item.use_count), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-            ]));
+            ])));
         }
     }
 
-    let stats_widget = Paragraph::new(stats_text)
-        .block(Block::default().title(" 🔥 Most Run Items ").borders(Borders::ALL).border_style(Style::default().fg(Color::Gray)));
-    frame.render_widget(stats_widget, bottom_chunks[0]);
+    let stats_widget = List::new(list_items)
+        .block(Block::default()
+            .title(" 🔥 Most Run Items ")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Gray))
+        )
+        .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
+        .highlight_symbol("> ");
+
+    let mut list_state = ratatui::widgets::ListState::default();
+    if !sorted_items.is_empty() {
+        list_state.select(Some(app.dashboard_selected));
+    }
+    frame.render_stateful_widget(stats_widget, bottom_chunks[0], &mut list_state);
 
     let history_block = Block::default()
         .title(" Execution History (Last 10) ")

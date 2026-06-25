@@ -35,7 +35,7 @@ pub fn handle_key_event(app: &mut App, key: KeyEvent, terminal: &mut DefaultTerm
     }
 
     match app.screen {
-        AppScreen::Dashboard => navigation::handle_dashboard_key(app, key)?,
+        AppScreen::Dashboard => navigation::handle_dashboard_key(app, key, terminal)?,
         AppScreen::ListCommands => lists::handle_list_key(app, key, terminal)?,
         AppScreen::UpdateCommandList => lists::handle_update_list_key(app, key)?,
         AppScreen::DeleteCommandList => lists::handle_delete_list_key(app, key)?,

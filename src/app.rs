@@ -83,6 +83,7 @@ pub struct App {
     pub import_message: Option<String>,
     
     pub tick_count: u64,
+    pub dashboard_selected: usize,
 }
 
 impl App {
@@ -116,6 +117,7 @@ impl App {
             import_path: String::new(),
             import_message: None,
             tick_count: 0,
+            dashboard_selected: 0,
         }
     }
 

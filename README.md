@@ -6,6 +6,7 @@ Aliace is a high-performance, keyboard-driven command registry and execution orc
 Aliace enables software engineers and system administrators to catalog complex shell commands, orchestrate sequential execution groups, capture execution telemetry, and define dynamic parameter bindings—all backed by a lightweight, portable JSON registry.
 
 ![Aliace Dashboard](docs/ss.png)
+![Aliace Dashboard](docs/ss2.png)
 ---
 
 ## 🔑 Key Features & Business Value

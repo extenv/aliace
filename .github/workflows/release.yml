@@ -36,6 +36,8 @@ jobs:
             asset_name: aliace-macos-aarch64.tar.gz
 
     runs-on: ${{ matrix.platform.os }}
+    permissions:
+      contents: write
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
